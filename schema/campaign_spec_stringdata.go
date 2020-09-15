@@ -140,6 +140,7 @@ const CampaignSpecJSON = `{
                   "type": "array",
                   "items": {
                     "type": "object",
+                    "title": "TitleExcept",
                     "required": ["match", "value"],
                     "additionalProperties": false,
                     "properties": {
@@ -178,6 +179,7 @@ const CampaignSpecJSON = `{
                   "type": "array",
                   "items": {
                     "type": "object",
+                    "title": "BodyExcept",
                     "required": ["match", "value"],
                     "additionalProperties": false,
                     "properties": {
@@ -216,6 +218,7 @@ const CampaignSpecJSON = `{
                   "type": "array",
                   "items": {
                     "type": "object",
+                    "title": "BranchExcept",
                     "required": ["match", "value"],
                     "additionalProperties": false,
                     "properties": {
@@ -261,6 +264,7 @@ const CampaignSpecJSON = `{
                       "type": "array",
                       "items": {
                         "type": "object",
+                        "title": "GitCommitMessageExcept",
                         "required": ["match", "value"],
                         "additionalProperties": false,
                         "properties": {
@@ -306,6 +310,7 @@ const CampaignSpecJSON = `{
                           "type": "array",
                           "items": {
                             "type": "object",
+                            "title": "GitCommitAuthorExcept",
                             "required": ["match", "value"],
                             "additionalProperties": false,
                             "properties": {
@@ -346,6 +351,7 @@ const CampaignSpecJSON = `{
                           "type": "array",
                           "items": {
                             "type": "object",
+                            "title": "GitCommitEmailExcept",
                             "required": ["match", "value"],
                             "additionalProperties": false,
                             "properties": {
