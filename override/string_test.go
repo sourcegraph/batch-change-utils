@@ -96,8 +96,7 @@ func TestStringValue(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			have := tc.in.Value(tc.name)
-			if have != tc.want {
+			if have := tc.in.Value(tc.name); have != tc.want {
 				t.Errorf("unexpected value: have=%q want=%q", have, tc.want)
 			}
 		})
@@ -190,7 +189,8 @@ except:
 
 	t.Run("invalid", func(t *testing.T) {
 		for name, in := range map[string]string{
-			"array": `[]`,
+			"array":         `[]`,
+			"invalid match": `except: {"match": "["}`,
 		} {
 			t.Run(name, func(t *testing.T) {
 				var have String
@@ -201,6 +201,8 @@ except:
 		}
 	})
 }
+
+// Define equality methods required for cmp to be able to work its magic.
 
 func (a *String) Equal(b *String) bool {
 	return a.defaultValue == b.defaultValue && cmp.Equal(a.except, b.except)
