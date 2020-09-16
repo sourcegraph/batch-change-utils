@@ -2,7 +2,6 @@ package override
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/gobwas/glob"
 	"github.com/hashicorp/go-multierror"
@@ -10,126 +9,86 @@ import (
 )
 
 type Bool struct {
-	booleanValue *bool
-	boolOnlyExcept
+	rules []boolRule
 }
 
-type boolOnlyExcept struct {
-	Only   []string `json:"only,omitempty" yaml:"only"`
-	Except []string `json:"except,omitempty" yaml:"except"`
+const allPattern = "*"
 
-	only   []glob.Glob
-	except []glob.Glob
+type boolRule struct {
+	pattern  string
+	compiled glob.Glob
+	value    bool
 }
 
 func (b *Bool) Is(name string) bool {
-	if b.booleanValue != nil {
-		return *b.booleanValue
-	}
-
-	if len(b.only) > 0 {
-		for _, g := range b.only {
-			if g.Match(name) {
-				return true
-			}
-		}
-		return false
-	}
-
-	for _, g := range b.except {
-		if g.Match(name) {
-			return false
+	// We want the last match to win, so we'll iterate in reverse order.
+	for i := len(b.rules) - 1; i >= 0; i-- {
+		if b.rules[i].compiled.Match(name) {
+			return b.rules[i].value
 		}
 	}
-	return true
+
+	// If nothing matched, we'll treat the value as false.
+	return false
 }
 
 func (b *Bool) MarshalJSON() ([]byte, error) {
-	if b.booleanValue != nil {
-		return json.Marshal(*b.booleanValue)
+	if len(b.rules) == 0 {
+		return json.Marshal(false)
+	} else if len(b.rules) == 1 && b.rules[0].pattern == allPattern {
+		return json.Marshal(b.rules[0].value)
 	}
 
-	return json.Marshal(&b.boolOnlyExcept)
+	rules := []map[string]bool{}
+	for _, rule := range b.rules {
+		rules = append(rules, map[string]bool{
+			rule.pattern: rule.value,
+		})
+	}
+	return json.Marshal(rules)
 }
 
 func (b *Bool) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var def bool
-	if err := unmarshal(&def); err == nil {
-		b.booleanValue = &def
-		return nil
-	}
+	var all bool
+	if err := unmarshal(&all); err == nil {
+		b.rules = []boolRule{{
+			pattern: allPattern,
+			value:   all,
+		}}
+	} else {
+		rules := []map[string]bool{}
+		if err := unmarshal(&rules); err != nil {
+			return err
+		}
 
-	b.booleanValue = nil
-	if err := unmarshal(&b.boolOnlyExcept); err != nil {
-		return err
+		b.rules = []boolRule{}
+		for i, rule := range rules {
+			if len(rule) != 1 {
+				return errors.Errorf("unexpected number of elements in the array at entry %d: %d (must be 1)", i, len(rule))
+			}
+			for pattern, value := range rule {
+				b.rules = append(b.rules, boolRule{
+					pattern: pattern,
+					value:   value,
+				})
+			}
+		}
 	}
 
 	return b.init()
 }
 
 func (b *Bool) init() error {
-	// Only one field should be set.
-	bv := boolValidator{}
-	if b.booleanValue != nil {
-		bv.appendType("boolean value")
-	}
-	if len(b.Only) > 0 {
-		bv.appendType("only list")
-	}
-	if len(b.Except) > 0 {
-		bv.appendType("except list")
-	}
-	if err := bv.errorOrNil(); err != nil {
-		return err
-	}
-
-	// Now compile the patterns, if any.
-	if len(b.Only) > 0 {
-		var err error
-		b.only, err = compilePatterns(b.Only)
-		return err
-	} else if len(b.Except) > 0 {
-		var err error
-		b.except, err = compilePatterns(b.Except)
-		return err
-	}
-
-	return nil
-}
-
-func compilePatterns(patterns []string) ([]glob.Glob, error) {
 	var errs *multierror.Error
 
-	globs := make([]glob.Glob, len(patterns))
-	for i, pattern := range patterns {
-		g, err := glob.Compile(pattern)
+	for i := range b.rules {
+		g, err := glob.Compile(b.rules[i].pattern)
 		if err != nil {
-			errs = multierror.Append(errs, errors.Wrapf(err, "compiling repo pattern %q", pattern))
+			errs = multierror.Append(errs, errors.Wrapf(err, "compiling repo pattern %d: %q", i, b.rules[i].pattern))
 		} else {
-			globs[i] = g
+			b.rules[i].compiled = g
 		}
 	}
 
-	return globs, errs.ErrorOrNil()
-}
-
-type boolValidator []string
-
-func (v boolValidator) Error() string {
-	if len(v) == 0 {
-		return "Bool values must include a boolean value, an only list, or an except list"
-	} else if len(v) > 1 {
-		return "Bool values must include only one of a boolean value, an only list, or an except list; this value includes: " + strings.Join(v, ", ")
-	}
-
-	panic("attempted to call Error() on a boolValidator that doesn't represent an error condition; an errorOrNil() call is missing")
-}
-
-func (v *boolValidator) appendType(name string) { *v = append(*v, name) }
-
-func (v *boolValidator) errorOrNil() error {
-	if len(*v) == 1 {
-		return nil
-	}
-	return v
+	return errs.ErrorOrNil()
 }

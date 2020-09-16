@@ -9,96 +9,53 @@ import (
 )
 
 func TestBoolInvalid(t *testing.T) {
-	t.Run("invalid glob patterns", func(t *testing.T) {
-		for name, in := range map[string]Bool{
-			"invalid only pattern": {boolOnlyExcept: boolOnlyExcept{
-				Only: []string{"["},
-			}},
-			"invalid except pattern": {boolOnlyExcept: boolOnlyExcept{
-				Except: []string{"["},
-			}},
-		} {
-			t.Run(name, func(t *testing.T) {
-				if err := in.init(); err == nil {
-					t.Error("unexpected nil error")
-				}
-			})
-		}
-	})
-
-	t.Run("invalid field combinations", func(t *testing.T) {
-		b := true
-
-		for name, in := range map[string]Bool{
-			"zero value": {},
-			"boolean value and only": {
-				booleanValue:   &b,
-				boolOnlyExcept: boolOnlyExcept{Only: []string{"*"}},
-			},
-			"boolean value and except": {
-				booleanValue:   &b,
-				boolOnlyExcept: boolOnlyExcept{Except: []string{"*"}},
-			},
-			"only and except": {boolOnlyExcept: boolOnlyExcept{
-				Only:   []string{"*"},
-				Except: []string{"*"},
-			}},
-			"ALL THE THINGS #yolo": {
-				booleanValue: &b,
-				boolOnlyExcept: boolOnlyExcept{
-					Only:   []string{"*"},
-					Except: []string{"*"},
-				},
-			},
-		} {
-			t.Run(name, func(t *testing.T) {
-				err := in.init()
-				if err == nil {
-					t.Error("unexpected nil error")
-				} else if _, ok := err.(*boolValidator); !ok {
-					t.Errorf("unexpected error of type %T: %v", err, err)
-				}
-			})
-		}
-	})
+	b := Bool{rules: []boolRule{{pattern: "["}}}
+	if err := b.init(); err == nil {
+		t.Error("unexpected nil error")
+	}
 }
 
 func TestBoolIs(t *testing.T) {
-	bf := false
-	bt := true
-
 	for name, tc := range map[string]struct {
 		in   Bool
 		name string
 		want bool
 	}{
-		"boolean false": {
-			in:   Bool{booleanValue: &bf},
+		"wildcard false": {
+			in: Bool{
+				rules: []boolRule{{pattern: allPattern, value: false}},
+			},
 			name: "foo",
 			want: false,
 		},
-		"boolean true": {
-			in:   Bool{booleanValue: &bt},
+		"wildcard true": {
+			in: Bool{
+				rules: []boolRule{{pattern: allPattern, value: true}},
+			},
 			name: "foo",
 			want: true,
 		},
-		"only list; no match": {
-			in:   Bool{boolOnlyExcept: boolOnlyExcept{Only: []string{"bar*"}}},
+		"list exhausted": {
+			in: Bool{
+				rules: []boolRule{{pattern: "bar*", value: true}},
+			},
 			name: "foo",
 			want: false,
 		},
-		"only list; with match": {
-			in:   Bool{boolOnlyExcept: boolOnlyExcept{Only: []string{"bar*"}}},
+		"single match": {
+			in: Bool{
+				rules: []boolRule{{pattern: "bar*", value: true}},
+			},
 			name: "bar",
 			want: true,
 		},
-		"except list; no match": {
-			in:   Bool{boolOnlyExcept: boolOnlyExcept{Except: []string{"bar*"}}},
-			name: "foo",
-			want: true,
-		},
-		"except list; with match": {
-			in:   Bool{boolOnlyExcept: boolOnlyExcept{Except: []string{"bar*"}}},
+		"multiple matches": {
+			in: Bool{
+				rules: []boolRule{
+					{pattern: allPattern, value: true},
+					{pattern: "bar*", value: false},
+				},
+			},
 			name: "bar",
 			want: false,
 		},
@@ -116,23 +73,36 @@ func TestBoolIs(t *testing.T) {
 }
 
 func TestBoolJSON(t *testing.T) {
-	b := false
-
 	for name, tc := range map[string]struct {
 		in   Bool
 		want string
 	}{
-		"boolean value": {
-			in:   Bool{booleanValue: &b},
+		"no rules": {
+			in: Bool{
+				rules: []boolRule{},
+			},
 			want: `false`,
 		},
-		"only list": {
-			in:   Bool{boolOnlyExcept: boolOnlyExcept{Only: []string{"*"}}},
-			want: `{"only":["*"]}`,
+		"one wildcard rule": {
+			in: Bool{
+				rules: []boolRule{{pattern: allPattern, value: true}},
+			},
+			want: `true`,
 		},
-		"except list": {
-			in:   Bool{boolOnlyExcept: boolOnlyExcept{Except: []string{"*"}}},
-			want: `{"except":["*"]}`,
+		"one non-wildcard rule": {
+			in: Bool{
+				rules: []boolRule{{pattern: "bar*", value: true}},
+			},
+			want: `[{"bar*":true}]`,
+		},
+		"multiple rules": {
+			in: Bool{
+				rules: []boolRule{
+					{pattern: allPattern, value: true},
+					{pattern: "bar*", value: false},
+				},
+			},
+			want: `[{"*":true},{"bar*":false}]`,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -149,27 +119,40 @@ func TestBoolJSON(t *testing.T) {
 
 func TestBoolYAML(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
-		b := false
-
 		for name, tc := range map[string]struct {
 			in   string
 			want Bool
 		}{
-			"boolean value": {
-				in:   `false`,
-				want: Bool{booleanValue: &b},
+			"single false": {
+				in: `false`,
+				want: Bool{
+					rules: []boolRule{
+						{pattern: allPattern, value: false},
+					},
+				},
 			},
-			"only list": {
-				in: `only: ["foo", "bar"]`,
-				want: Bool{boolOnlyExcept: boolOnlyExcept{
-					Only: []string{"foo", "bar"},
-				}},
+			"single true": {
+				in: `true`,
+				want: Bool{
+					rules: []boolRule{
+						{pattern: allPattern, value: true},
+					},
+				},
 			},
-			"except list": {
-				in: `except: ["foo", "bar"]`,
-				want: Bool{boolOnlyExcept: boolOnlyExcept{
-					Except: []string{"foo", "bar"},
-				}},
+			"empty list": {
+				in: `[]`,
+				want: Bool{
+					rules: []boolRule{},
+				},
+			},
+			"multiple rule list": {
+				in: "- \"*\": true\n- github.com/sourcegraph/*: false",
+				want: Bool{
+					rules: []boolRule{
+						{pattern: allPattern, value: true},
+						{pattern: "github.com/sourcegraph/*", value: false},
+					},
+				},
 			},
 		} {
 			t.Run(name, func(t *testing.T) {
@@ -186,9 +169,10 @@ func TestBoolYAML(t *testing.T) {
 
 	t.Run("invalid", func(t *testing.T) {
 		for name, in := range map[string]string{
-			"array":           `[]`,
-			"bad only list":   `only: ["["]`,
-			"bad except list": `except: ["["]`,
+			"string":          `foo`,
+			"empty object":    `- {}`,
+			"too many fields": `- {"foo": true, "bar": false}`,
+			"invalid glob":    `- "[": false`,
 		} {
 			t.Run(name, func(t *testing.T) {
 				var have Bool
@@ -200,48 +184,12 @@ func TestBoolYAML(t *testing.T) {
 	})
 }
 
-func TestBoolValidator(t *testing.T) {
-	// It's questionable how useful this test is, but we do technically expose
-	// boolValidator as an error value. Let's sanity check the return values of
-	// Error(), at least.
-	for name, bv := range map[string]boolValidator{
-		"not enough fields": {},
-		"too many fields":   {"foo", "bar"},
-	} {
-		t.Run(name, func(t *testing.T) {
-			if bv.Error() == "" {
-				t.Error("unexpected empty string")
-			}
-		})
-	}
-
-	t.Run("just the right number of fields", func(t *testing.T) {
-		defer func() {
-			if r := recover(); r == nil {
-				t.Error("unexpected lack of panic")
-			}
-		}()
-
-		bv := boolValidator{"foo"}
-		_ = bv.Error()
-	})
-}
-
 // Define equality methods required for cmp to be able to work its magic.
 
 func (a *Bool) Equal(b *Bool) bool {
-	if !cmp.Equal(a.booleanValue, b.booleanValue) {
-		return false
-	}
-	if !cmp.Equal(&a.boolOnlyExcept, &b.boolOnlyExcept) {
-		return false
-	}
-	return true
+	return cmp.Equal(a.rules, b.rules)
 }
 
-func (a *boolOnlyExcept) Equal(b *boolOnlyExcept) bool {
-	if !cmp.Equal(a.Only, b.Only) || !cmp.Equal(a.Except, b.Except) {
-		return false
-	}
-	return true
+func (a boolRule) Equal(b boolRule) bool {
+	return a.pattern == b.pattern && a.value == b.value
 }
