@@ -9,8 +9,7 @@ import (
 )
 
 func TestBoolInvalid(t *testing.T) {
-	b := Bool{rules: []boolRule{{pattern: "["}}}
-	if err := b.init(); err == nil {
+	if _, err := newBoolRule("[", true); err == nil {
 		t.Error("unexpected nil error")
 	}
 }
@@ -23,35 +22,35 @@ func TestBoolIs(t *testing.T) {
 	}{
 		"wildcard false": {
 			in: Bool{
-				rules: []boolRule{{pattern: allPattern, value: false}},
+				rules: []*boolRule{{pattern: allPattern, value: false}},
 			},
 			name: "foo",
 			want: false,
 		},
 		"wildcard true": {
 			in: Bool{
-				rules: []boolRule{{pattern: allPattern, value: true}},
+				rules: []*boolRule{{pattern: allPattern, value: true}},
 			},
 			name: "foo",
 			want: true,
 		},
 		"list exhausted": {
 			in: Bool{
-				rules: []boolRule{{pattern: "bar*", value: true}},
+				rules: []*boolRule{{pattern: "bar*", value: true}},
 			},
 			name: "foo",
 			want: false,
 		},
 		"single match": {
 			in: Bool{
-				rules: []boolRule{{pattern: "bar*", value: true}},
+				rules: []*boolRule{{pattern: "bar*", value: true}},
 			},
 			name: "bar",
 			want: true,
 		},
 		"multiple matches": {
 			in: Bool{
-				rules: []boolRule{
+				rules: []*boolRule{
 					{pattern: allPattern, value: true},
 					{pattern: "bar*", value: false},
 				},
@@ -61,7 +60,7 @@ func TestBoolIs(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if err := tc.in.init(); err != nil {
+			if err := initBool(&tc.in); err != nil {
 				t.Fatal(err)
 			}
 
@@ -79,25 +78,25 @@ func TestBoolJSON(t *testing.T) {
 	}{
 		"no rules": {
 			in: Bool{
-				rules: []boolRule{},
+				rules: []*boolRule{},
 			},
 			want: `false`,
 		},
 		"one wildcard rule": {
 			in: Bool{
-				rules: []boolRule{{pattern: allPattern, value: true}},
+				rules: []*boolRule{{pattern: allPattern, value: true}},
 			},
 			want: `true`,
 		},
 		"one non-wildcard rule": {
 			in: Bool{
-				rules: []boolRule{{pattern: "bar*", value: true}},
+				rules: []*boolRule{{pattern: "bar*", value: true}},
 			},
 			want: `[{"bar*":true}]`,
 		},
 		"multiple rules": {
 			in: Bool{
-				rules: []boolRule{
+				rules: []*boolRule{
 					{pattern: allPattern, value: true},
 					{pattern: "bar*", value: false},
 				},
@@ -126,7 +125,7 @@ func TestBoolYAML(t *testing.T) {
 			"single false": {
 				in: `false`,
 				want: Bool{
-					rules: []boolRule{
+					rules: []*boolRule{
 						{pattern: allPattern, value: false},
 					},
 				},
@@ -134,7 +133,7 @@ func TestBoolYAML(t *testing.T) {
 			"single true": {
 				in: `true`,
 				want: Bool{
-					rules: []boolRule{
+					rules: []*boolRule{
 						{pattern: allPattern, value: true},
 					},
 				},
@@ -142,13 +141,13 @@ func TestBoolYAML(t *testing.T) {
 			"empty list": {
 				in: `[]`,
 				want: Bool{
-					rules: []boolRule{},
+					rules: []*boolRule{},
 				},
 			},
 			"multiple rule list": {
 				in: "- \"*\": true\n- github.com/sourcegraph/*: false",
 				want: Bool{
-					rules: []boolRule{
+					rules: []*boolRule{
 						{pattern: allPattern, value: true},
 						{pattern: "github.com/sourcegraph/*", value: false},
 					},
@@ -192,4 +191,18 @@ func (a *Bool) Equal(b *Bool) bool {
 
 func (a boolRule) Equal(b boolRule) bool {
 	return a.pattern == b.pattern && a.value == b.value
+}
+
+// initBool ensures all rules are compiled.
+func initBool(b *Bool) (err error) {
+	for i, rule := range b.rules {
+		if rule.compiled == nil {
+			b.rules[i], err = newBoolRule(rule.pattern, rule.value)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

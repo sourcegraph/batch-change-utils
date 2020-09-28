@@ -138,21 +138,14 @@ const CampaignSpecJSON = `{
                 },
                 "except": {
                   "type": "array",
+                  "description": "A list of repository patterns to match. In the event multiple patterns match, the last matching pattern in the list will be used.",
                   "items": {
                     "type": "object",
                     "title": "TitleExcept",
-                    "required": ["match", "value"],
-                    "additionalProperties": false,
-                    "properties": {
-                      "match": {
-                        "type": "string",
-                        "description": "The repository name to match. Glob wildcards are supported."
-                      },
-                      "value": {
-                        "type": "string",
-                        "description": "The title to use for changesets that match this rule."
-                      }
-                    }
+                    "description": "An object with one field: the key is the glob pattern to match against repository names; the value will be used as the title for matching repositories.",
+                    "additionalProperties": { "type": "string" },
+                    "minProperties": 1,
+                    "maxProperties": 1
                   }
                 }
               }
@@ -180,18 +173,10 @@ const CampaignSpecJSON = `{
                   "items": {
                     "type": "object",
                     "title": "BodyExcept",
-                    "required": ["match", "value"],
-                    "additionalProperties": false,
-                    "properties": {
-                      "match": {
-                        "type": "string",
-                        "description": "The repository name to match. Glob wildcards are supported."
-                      },
-                      "value": {
-                        "type": "string",
-                        "description": "The body to use for changesets that match this rule."
-                      }
-                    }
+                    "description": "An object with one field: the key is the glob pattern to match against repository names; the value will be used as the body for matching repositories.",
+                    "additionalProperties": { "type": "string" },
+                    "minProperties": 1,
+                    "maxProperties": 1
                   }
                 }
               }
@@ -219,18 +204,10 @@ const CampaignSpecJSON = `{
                   "items": {
                     "type": "object",
                     "title": "BranchExcept",
-                    "required": ["match", "value"],
-                    "additionalProperties": false,
-                    "properties": {
-                      "match": {
-                        "type": "string",
-                        "description": "The repository name to match. Glob wildcards are supported."
-                      },
-                      "value": {
-                        "type": "string",
-                        "description": "The branch name to use for changesets that match this rule."
-                      }
-                    }
+                    "description": "An object with one field: the key is the glob pattern to match against repository names; the value will be used as the branch name for matching repositories.",
+                    "additionalProperties": { "type": "string" },
+                    "minProperties": 1,
+                    "maxProperties": 1
                   }
                 }
               }
@@ -265,18 +242,10 @@ const CampaignSpecJSON = `{
                       "items": {
                         "type": "object",
                         "title": "GitCommitMessageExcept",
-                        "required": ["match", "value"],
-                        "additionalProperties": false,
-                        "properties": {
-                          "match": {
-                            "type": "string",
-                            "description": "The repository name to match. Glob wildcards are supported."
-                          },
-                          "value": {
-                            "type": "string",
-                            "description": "The commit message to use for changesets that match this rule."
-                          }
-                        }
+                        "description": "An object with one field: the key is the glob pattern to match against repository names; the value will be used as the commit message for matching repositories.",
+                        "additionalProperties": { "type": "string" },
+                        "minProperties": 1,
+                        "maxProperties": 1
                       }
                     }
                   }
@@ -310,19 +279,11 @@ const CampaignSpecJSON = `{
                           "type": "array",
                           "items": {
                             "type": "object",
-                            "title": "GitCommitAuthorExcept",
-                            "required": ["match", "value"],
-                            "additionalProperties": false,
-                            "properties": {
-                              "match": {
-                                "type": "string",
-                                "description": "The repository name to match. Glob wildcards are supported."
-                              },
-                              "value": {
-                                "type": "string",
-                                "description": "The author name to use for changesets that match this rule."
-                              }
-                            }
+                            "title": "GitCommitAuthorNameExcept",
+                            "description": "An object with one field: the key is the glob pattern to match against repository names; the value will be used as the author name for matching repositories.",
+                            "additionalProperties": { "type": "string" },
+                            "minProperties": 1,
+                            "maxProperties": 1
                           }
                         }
                       }
@@ -351,20 +312,14 @@ const CampaignSpecJSON = `{
                           "type": "array",
                           "items": {
                             "type": "object",
-                            "title": "GitCommitEmailExcept",
-                            "required": ["match", "value"],
-                            "additionalProperties": false,
-                            "properties": {
-                              "match": {
-                                "type": "string",
-                                "description": "The repository name to match. Glob wildcards are supported."
-                              },
-                              "value": {
-                                "type": "string",
-                                "format": "email",
-                                "description": "The author email to use for changesets that match this rule."
-                              }
-                            }
+                            "title": "GitCommitAuthorEmailExcept",
+                            "description": "An object with one field: the key is the glob pattern to match against repository names; the value will be used as the author email for matching repositories.",
+                            "additionalProperties": {
+                              "type": "string",
+                              "format": "email"
+                            },
+                            "minProperties": 1,
+                            "maxProperties": 1
                           }
                         }
                       }

@@ -4,34 +4,24 @@ import (
 	"encoding/json"
 
 	"github.com/gobwas/glob"
-	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 )
 
 type String struct {
 	defaultValue string
-	except       []*stringExcept
+	rules        []*stringRule
 }
 
-type stringExcept struct {
-	Match string `json:"match,omitempty" yaml:"match"`
-	Value string `json:"value,omitempty" yaml:"value"`
-
-	match glob.Glob
-}
-
-func (se *stringExcept) init() (err error) {
-	if se.match, err = glob.Compile(se.Match); err != nil {
-		return errors.Wrapf(err, "compiling repo pattern %q", se.match)
-	}
-
-	return nil
+type stringRule struct {
+	pattern  string
+	compiled glob.Glob
+	value    string
 }
 
 func (s *String) Value(name string) string {
-	for _, mv := range s.except {
-		if mv.match.Match(name) {
-			return mv.Value
+	for i := len(s.rules) - 1; i >= 0; i-- {
+		if s.rules[i].compiled.Match(name) {
+			return s.rules[i].value
 		}
 	}
 
@@ -39,49 +29,72 @@ func (s *String) Value(name string) string {
 }
 
 func (s *String) MarshalJSON() ([]byte, error) {
-	if len(s.except) == 0 {
+	if len(s.rules) == 0 {
 		return json.Marshal(s.defaultValue)
 	}
 
-	return json.Marshal(&struct {
-		Default string          `json:"default,omitempty"`
-		Except  []*stringExcept `json:"except,omitempty"`
+	enc := struct {
+		Default string              `json:"default,omitempty"`
+		Except  []map[string]string `json:"except,omitempty"`
 	}{
 		Default: s.defaultValue,
-		Except:  s.except,
-	})
+		Except:  make([]map[string]string, len(s.rules)),
+	}
+
+	for i := 0; i < len(s.rules); i++ {
+		enc.Except[i] = map[string]string{
+			s.rules[i].pattern: s.rules[i].value,
+		}
+	}
+
+	return json.Marshal(enc)
 }
 
 func (s *String) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var dv string
 	if err := unmarshal(&dv); err == nil {
 		s.defaultValue = dv
-		s.except = []*stringExcept{}
+		s.rules = nil
 		return nil
 	}
 
 	var temp struct {
-		Default string          `yaml:"default"`
-		Except  []*stringExcept `yaml:"except"`
+		Default string              `yaml:"default"`
+		Except  []map[string]string `yaml:"except"`
 	}
 	if err := unmarshal(&temp); err != nil {
 		return err
 	}
 
 	s.defaultValue = temp.Default
-	s.except = temp.Except
-
-	return s.initExcepts()
-}
-
-func (s *String) initExcepts() error {
-	var errs *multierror.Error
-
-	for _, se := range s.except {
-		if err := se.init(); err != nil {
-			errs = multierror.Append(errs, err)
+	if len(temp.Except) > 0 {
+		s.rules = make([]*stringRule, len(temp.Except))
+		for i, rule := range temp.Except {
+			if len(rule) != 1 {
+				return errors.Errorf("unexpected number of elements in the array entry %d: %d (must be 1)", i, len(rule))
+			}
+			for pattern, value := range rule {
+				var err error
+				s.rules[i], err = newStringRule(pattern, value)
+				if err != nil {
+					return errors.Wrapf(err, "building rule for array entry %d", i)
+				}
+			}
 		}
 	}
 
-	return errs.ErrorOrNil()
+	return nil
+}
+
+func newStringRule(pattern, value string) (*stringRule, error) {
+	compiled, err := glob.Compile(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	return &stringRule{
+		pattern:  pattern,
+		compiled: compiled,
+		value:    value,
+	}, nil
 }

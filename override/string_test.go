@@ -9,10 +9,7 @@ import (
 )
 
 func TestStringInvalid(t *testing.T) {
-	s := String{except: []*stringExcept{
-		{Match: "["},
-	}}
-	if err := s.initExcepts(); err == nil {
+	if _, err := newStringRule("[", "foo"); err == nil {
 		t.Error("unexpected nil error")
 	}
 }
@@ -41,8 +38,8 @@ func TestStringValue(t *testing.T) {
 		"no match": {
 			in: String{
 				defaultValue: "foo",
-				except: []*stringExcept{
-					{Match: "bar*", Value: "quux"},
+				rules: []*stringRule{
+					{pattern: "bar*", value: "quux"},
 				},
 			},
 			name: "",
@@ -51,8 +48,8 @@ func TestStringValue(t *testing.T) {
 		"single match": {
 			in: String{
 				defaultValue: "foo",
-				except: []*stringExcept{
-					{Match: "bar*", Value: "quux"},
+				rules: []*stringRule{
+					{pattern: "bar*", value: "quux"},
 				},
 			},
 			name: "barfly",
@@ -61,19 +58,19 @@ func TestStringValue(t *testing.T) {
 		"multiple matches": {
 			in: String{
 				defaultValue: "foo",
-				except: []*stringExcept{
-					{Match: "bar*", Value: "quux"},
-					{Match: "b*", Value: "baz"},
+				rules: []*stringRule{
+					{pattern: "bar*", value: "quux"},
+					{pattern: "b*", value: "baz"},
 				},
 			},
 			name: "barfly",
-			want: "quux",
+			want: "baz",
 		},
 		"all inputs match; empty name": {
 			in: String{
 				defaultValue: "foo",
-				except: []*stringExcept{
-					{Match: "*", Value: "quux"},
+				rules: []*stringRule{
+					{pattern: "*", value: "quux"},
 				},
 			},
 			name: "",
@@ -82,8 +79,8 @@ func TestStringValue(t *testing.T) {
 		"all inputs match; non-empty name": {
 			in: String{
 				defaultValue: "foo",
-				except: []*stringExcept{
-					{Match: "*", Value: "quux"},
+				rules: []*stringRule{
+					{pattern: "*", value: "quux"},
 				},
 			},
 			name: "foo",
@@ -92,7 +89,7 @@ func TestStringValue(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			// This would normally be done via unmarshalling.
-			if err := tc.in.initExcepts(); err != nil {
+			if err := initString(&tc.in); err != nil {
 				t.Fatal(err)
 			}
 
@@ -119,11 +116,11 @@ func TestStringJSON(t *testing.T) {
 		"except values": {
 			in: String{
 				defaultValue: "foo",
-				except: []*stringExcept{
-					{Match: "foo", Value: "bar"},
+				rules: []*stringRule{
+					{pattern: "foo", value: "bar"},
 				},
 			},
-			want: `{"default":"foo","except":[{"match":"foo","value":"bar"}]}`,
+			want: `{"default":"foo","except":[{"foo":"bar"}]}`,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -146,15 +143,15 @@ func TestStringYAML(t *testing.T) {
 		}{
 			"empty string": {
 				in:   `""`,
-				want: String{except: []*stringExcept{}},
+				want: String{rules: nil},
 			},
 			"non-empty string": {
 				in:   `"foo"`,
-				want: String{defaultValue: "foo", except: []*stringExcept{}},
+				want: String{defaultValue: "foo", rules: nil},
 			},
 			"coercible non-string": {
 				in:   `42`,
-				want: String{defaultValue: "42", except: []*stringExcept{}},
+				want: String{defaultValue: "42", rules: nil},
 			},
 			"different object": {
 				in:   `foo: bar`,
@@ -168,10 +165,9 @@ func TestStringYAML(t *testing.T) {
 				in: `
 default: foo
 except:
-    - match: bar
-      value: quux`,
-				want: String{defaultValue: "foo", except: []*stringExcept{
-					{Match: "bar", Value: "quux"},
+    - bar: quux`,
+				want: String{defaultValue: "foo", rules: []*stringRule{
+					{pattern: "bar", value: "quux"},
 				}},
 			},
 		} {
@@ -205,9 +201,22 @@ except:
 // Define equality methods required for cmp to be able to work its magic.
 
 func (a *String) Equal(b *String) bool {
-	return a.defaultValue == b.defaultValue && cmp.Equal(a.except, b.except)
+	return a.defaultValue == b.defaultValue && cmp.Equal(a.rules, b.rules)
 }
 
-func (a *stringExcept) Equal(b *stringExcept) bool {
-	return a.Match == b.Match && a.Value == b.Value
+func (a *stringRule) Equal(b *stringRule) bool {
+	return a.pattern == b.pattern && a.value == b.value
+}
+
+func initString(s *String) (err error) {
+	for i, rule := range s.rules {
+		if rule.compiled == nil {
+			s.rules[i], err = newStringRule(rule.pattern, rule.value)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 
 	"github.com/gobwas/glob"
-	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 )
 
 type Bool struct {
-	rules []boolRule
+	rules []*boolRule
 }
 
 const allPattern = "*"
@@ -51,7 +50,7 @@ func (b *Bool) MarshalJSON() ([]byte, error) {
 func (b *Bool) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var all bool
 	if err := unmarshal(&all); err == nil {
-		b.rules = []boolRule{{
+		b.rules = []*boolRule{{
 			pattern: allPattern,
 			value:   all,
 		}}
@@ -61,34 +60,33 @@ func (b *Bool) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return err
 		}
 
-		b.rules = []boolRule{}
+		b.rules = make([]*boolRule, len(rules))
 		for i, rule := range rules {
 			if len(rule) != 1 {
 				return errors.Errorf("unexpected number of elements in the array at entry %d: %d (must be 1)", i, len(rule))
 			}
 			for pattern, value := range rule {
-				b.rules = append(b.rules, boolRule{
-					pattern: pattern,
-					value:   value,
-				})
+				var err error
+				b.rules[i], err = newBoolRule(pattern, value)
+				if err != nil {
+					return errors.Wrapf(err, "building rule for array entry %d", i)
+				}
 			}
 		}
 	}
 
-	return b.init()
+	return nil
 }
 
-func (b *Bool) init() error {
-	var errs *multierror.Error
-
-	for i := range b.rules {
-		g, err := glob.Compile(b.rules[i].pattern)
-		if err != nil {
-			errs = multierror.Append(errs, errors.Wrapf(err, "compiling repo pattern %d: %q", i, b.rules[i].pattern))
-		} else {
-			b.rules[i].compiled = g
-		}
+func newBoolRule(pattern string, value bool) (*boolRule, error) {
+	compiled, err := glob.Compile(pattern)
+	if err != nil {
+		return nil, err
 	}
 
-	return errs.ErrorOrNil()
+	return &boolRule{
+		pattern:  pattern,
+		compiled: compiled,
+		value:    value,
+	}, nil
 }
