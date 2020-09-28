@@ -183,16 +183,6 @@ func TestBoolYAML(t *testing.T) {
 	})
 }
 
-// Define equality methods required for cmp to be able to work its magic.
-
-func (a *Bool) Equal(b *Bool) bool {
-	return cmp.Equal(a.rules, b.rules)
-}
-
-func (a boolRule) Equal(b boolRule) bool {
-	return a.pattern == b.pattern && a.value == b.value
-}
-
 // initBool ensures all rules are compiled.
 func initBool(b *Bool) (err error) {
 	for i, rule := range b.rules {

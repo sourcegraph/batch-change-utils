@@ -198,16 +198,6 @@ except:
 	})
 }
 
-// Define equality methods required for cmp to be able to work its magic.
-
-func (a *String) Equal(b *String) bool {
-	return a.defaultValue == b.defaultValue && cmp.Equal(a.rules, b.rules)
-}
-
-func (a *stringRule) Equal(b *stringRule) bool {
-	return a.pattern == b.pattern && a.value == b.value
-}
-
 func initString(s *String) (err error) {
 	for i, rule := range s.rules {
 		if rule.compiled == nil {

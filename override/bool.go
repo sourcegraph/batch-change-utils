@@ -98,3 +98,23 @@ func newBoolRule(pattern string, value bool) (*boolRule, error) {
 		value:    value,
 	}, nil
 }
+
+// Define equality methods required for cmp to be able to work its magic.
+
+func (a Bool) Equal(b Bool) bool {
+	if len(a.rules) != len(b.rules) {
+		return false
+	}
+
+	for i := range a.rules {
+		if a.rules[i].pattern != b.rules[i].pattern || a.rules[i].value != b.rules[i].value {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (a boolRule) Equal(b boolRule) bool {
+	return a.pattern == b.pattern && a.value == b.value
+}

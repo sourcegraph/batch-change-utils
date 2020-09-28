@@ -90,15 +90,26 @@ func (s *String) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func newStringRule(pattern, value string) (*stringRule, error) {
-	compiled, err := glob.Compile(pattern)
-	if err != nil {
-		return nil, err
+// Define equality methods required for cmp to be able to work its magic.
+
+func (a String) Equal(b String) bool {
+	if a.defaultValue != b.defaultValue {
+		return false
 	}
 
-	return &stringRule{
-		pattern:  pattern,
-		compiled: compiled,
-		value:    value,
-	}, nil
+	if len(a.rules) != len(b.rules) {
+		return false
+	}
+
+	for i := range a.rules {
+		if a.rules[i].pattern != b.rules[i].pattern || a.rules[i].value != b.rules[i].value {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (a stringRule) Equal(b stringRule) bool {
+	return a.pattern == b.pattern && a.value == b.value
 }
