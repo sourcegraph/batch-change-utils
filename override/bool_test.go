@@ -71,7 +71,7 @@ func TestBoolIs(t *testing.T) {
 	}
 }
 
-func TestBoolJSON(t *testing.T) {
+func TestBoolMarshalJSON(t *testing.T) {
 	for name, tc := range map[string]struct {
 		in   Bool
 		want string
@@ -114,6 +114,73 @@ func TestBoolJSON(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBoolUnmarshalJSON(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		for name, tc := range map[string]struct {
+			in   string
+			want Bool
+		}{
+			"single false": {
+				in: `false`,
+				want: Bool{
+					rules: []*boolRule{
+						{pattern: allPattern, value: false},
+					},
+				},
+			},
+			"single true": {
+				in: `true`,
+				want: Bool{
+					rules: []*boolRule{
+						{pattern: allPattern, value: true},
+					},
+				},
+			},
+			"empty list": {
+				in: `[]`,
+				want: Bool{
+					rules: []*boolRule{},
+				},
+			},
+			"multiple rule list": {
+				in: `[{"*":true},{"github.com/sourcegraph/*":false}]`,
+				want: Bool{
+					rules: []*boolRule{
+						{pattern: allPattern, value: true},
+						{pattern: "github.com/sourcegraph/*", value: false},
+					},
+				},
+			},
+		} {
+			t.Run(name, func(t *testing.T) {
+				var have Bool
+				if err := json.Unmarshal([]byte(tc.in), &have); err != nil {
+					t.Errorf("unexpected non-nil error: %v", err)
+				}
+				if diff := cmp.Diff(&have, &tc.want); diff != "" {
+					t.Errorf("unexpected Bool: %s", diff)
+				}
+			})
+		}
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		for name, in := range map[string]string{
+			"string":          `"foo"`,
+			"empty object":    `[{}]`,
+			"too many fields": `[{"foo": true,"bar":false}]`,
+			"invalid glob":    `[{"[":false}]`,
+		} {
+			t.Run(name, func(t *testing.T) {
+				var have Bool
+				if err := json.Unmarshal([]byte(in), &have); err == nil {
+					t.Error("unexpected nil error")
+				}
+			})
+		}
+	})
 }
 
 func TestBoolYAML(t *testing.T) {

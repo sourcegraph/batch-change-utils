@@ -37,10 +37,7 @@ func (s *String) MarshalJSON() ([]byte, error) {
 		return json.Marshal(s.defaultValue)
 	}
 
-	enc := struct {
-		Default string              `json:"default,omitempty"`
-		Except  []map[string]string `json:"except,omitempty"`
-	}{
+	enc := stringComplex{
 		Default: s.defaultValue,
 		Except:  make([]map[string]string, len(s.rules)),
 	}
@@ -54,6 +51,22 @@ func (s *String) MarshalJSON() ([]byte, error) {
 	return json.Marshal(enc)
 }
 
+func (s *String) UnmarshalJSON(data []byte) error {
+	var dv string
+	if err := json.Unmarshal(data, &dv); err == nil {
+		s.defaultValue = dv
+		s.rules = nil
+		return nil
+	}
+
+	var temp stringComplex
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+
+	return temp.hydrate(s)
+}
+
 func (s *String) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var dv string
 	if err := unmarshal(&dv); err == nil {
@@ -62,18 +75,38 @@ func (s *String) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return nil
 	}
 
-	var temp struct {
-		Default string              `yaml:"default"`
-		Except  []map[string]string `yaml:"except"`
-	}
+	var temp stringComplex
 	if err := unmarshal(&temp); err != nil {
 		return err
 	}
 
-	s.defaultValue = temp.Default
-	if len(temp.Except) > 0 {
-		s.rules = make([]*stringRule, len(temp.Except))
-		for i, rule := range temp.Except {
+	return temp.hydrate(s)
+}
+
+func newStringRule(pattern, value string) (*stringRule, error) {
+	compiled, err := glob.Compile(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	return &stringRule{
+		pattern:  pattern,
+		compiled: compiled,
+		value:    value,
+	}, nil
+}
+
+type stringComplex struct {
+	Default string              `json:"default,omitempty" yaml:"default"`
+	Except  []map[string]string `json:"except,omitempty" yaml:"except"`
+}
+
+func (sc *stringComplex) hydrate(s *String) error {
+	s.defaultValue = sc.Default
+
+	if len(sc.Except) > 0 {
+		s.rules = make([]*stringRule, len(sc.Except))
+		for i, rule := range sc.Except {
 			if len(rule) != 1 {
 				return errors.Errorf("unexpected number of elements in the array entry %d: %d (must be 1)", i, len(rule))
 			}
@@ -85,6 +118,8 @@ func (s *String) UnmarshalYAML(unmarshal func(interface{}) error) error {
 				}
 			}
 		}
+	} else {
+		s.rules = nil
 	}
 
 	return nil

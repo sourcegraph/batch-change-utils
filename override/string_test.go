@@ -100,7 +100,7 @@ func TestStringValue(t *testing.T) {
 	}
 }
 
-func TestStringJSON(t *testing.T) {
+func TestStringMarshalJSON(t *testing.T) {
 	for name, tc := range map[string]struct {
 		in   String
 		want string
@@ -133,6 +133,63 @@ func TestStringJSON(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStringUnmarshalJSON(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		for name, tc := range map[string]struct {
+			in   string
+			want String
+		}{
+			"empty string": {
+				in:   `""`,
+				want: String{rules: nil},
+			},
+			"non-empty string": {
+				in:   `"foo"`,
+				want: String{defaultValue: "foo", rules: nil},
+			},
+			"different object": {
+				in:   `{"foo":"bar"}`,
+				want: String{},
+			},
+			"complex value; only default": {
+				in:   `{"default":"foo"}`,
+				want: String{defaultValue: "foo"},
+			},
+			"complex value; default and exceptions": {
+				in: `{"default":"foo","except":[{"bar":"quux"}]}`,
+				want: String{defaultValue: "foo", rules: []*stringRule{
+					{pattern: "bar", value: "quux"},
+				}},
+			},
+		} {
+			t.Run(name, func(t *testing.T) {
+				var have String
+				if err := json.Unmarshal([]byte(tc.in), &have); err != nil {
+					t.Errorf("unexpected non-nil error: %v", err)
+				}
+				if diff := cmp.Diff(&have, &tc.want); diff != "" {
+					t.Errorf("unexpected String: %s", diff)
+				}
+			})
+		}
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		for name, in := range map[string]string{
+			"non-string scalar": `42`,
+			"array":             `[]`,
+			"invalid match":     `{"default":"foo","except":[{"[":"bar"}]}`,
+		} {
+			t.Run(name, func(t *testing.T) {
+				var have String
+				if err := json.Unmarshal([]byte(in), &have); err == nil {
+					t.Errorf("unexpected nil error: %v", have)
+				}
+			})
+		}
+	})
 }
 
 func TestStringYAML(t *testing.T) {

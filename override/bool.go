@@ -55,6 +55,24 @@ func (b *Bool) MarshalJSON() ([]byte, error) {
 	return json.Marshal(rules)
 }
 
+func (b *Bool) UnmarshalJSON(data []byte) error {
+	var all bool
+	if err := json.Unmarshal(data, &all); err == nil {
+		b.rules = []*boolRule{{
+			pattern: allPattern,
+			value:   all,
+		}}
+		return nil
+	}
+
+	var bc boolComplex
+	if err := json.Unmarshal(data, &bc); err != nil {
+		return err
+	}
+
+	return bc.hydrate(b)
+}
+
 func (b *Bool) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var all bool
 	if err := unmarshal(&all); err == nil {
@@ -62,28 +80,15 @@ func (b *Bool) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			pattern: allPattern,
 			value:   all,
 		}}
-	} else {
-		rules := []map[string]bool{}
-		if err := unmarshal(&rules); err != nil {
-			return err
-		}
-
-		b.rules = make([]*boolRule, len(rules))
-		for i, rule := range rules {
-			if len(rule) != 1 {
-				return errors.Errorf("unexpected number of elements in the array at entry %d: %d (must be 1)", i, len(rule))
-			}
-			for pattern, value := range rule {
-				var err error
-				b.rules[i], err = newBoolRule(pattern, value)
-				if err != nil {
-					return errors.Wrapf(err, "building rule for array entry %d", i)
-				}
-			}
-		}
+		return nil
 	}
 
-	return nil
+	var bc boolComplex
+	if err := unmarshal(&bc); err != nil {
+		return err
+	}
+
+	return bc.hydrate(b)
 }
 
 func newBoolRule(pattern string, value bool) (*boolRule, error) {
@@ -97,6 +102,26 @@ func newBoolRule(pattern string, value bool) (*boolRule, error) {
 		compiled: compiled,
 		value:    value,
 	}, nil
+}
+
+type boolComplex []map[string]bool
+
+func (bc boolComplex) hydrate(b *Bool) error {
+	b.rules = make([]*boolRule, len(bc))
+	for i, rule := range bc {
+		if len(rule) != 1 {
+			return errors.Errorf("unexpected number of elements in the array at entry %d: %d (must be 1)", i, len(rule))
+		}
+		for pattern, value := range rule {
+			var err error
+			b.rules[i], err = newBoolRule(pattern, value)
+			if err != nil {
+				return errors.Wrapf(err, "building rule for array entry %d", i)
+			}
+		}
+	}
+
+	return nil
 }
 
 // Define equality methods required for cmp to be able to work its magic.
