@@ -19,6 +19,14 @@ type boolRule struct {
 	value    bool
 }
 
+func FromBool(b bool) *Bool {
+	return &Bool{
+		rules: []*boolRule{
+			{pattern: allPattern, value: b},
+		},
+	}
+}
+
 func (b *Bool) Is(name string) bool {
 	// We want the last match to win, so we'll iterate in reverse order.
 	for i := len(b.rules) - 1; i >= 0; i-- {

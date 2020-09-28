@@ -18,6 +18,10 @@ type stringRule struct {
 	value    string
 }
 
+func FromString(s string) *String {
+	return &String{defaultValue: s}
+}
+
 func (s *String) Value(name string) string {
 	for i := len(s.rules) - 1; i >= 0; i-- {
 		if s.rules[i].compiled.Match(name) {
