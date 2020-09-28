@@ -19,8 +19,8 @@ type boolRule struct {
 	value    bool
 }
 
-func FromBool(b bool) *Bool {
-	return &Bool{
+func FromBool(b bool) Bool {
+	return Bool{
 		rules: []*boolRule{
 			{pattern: allPattern, value: b},
 		},

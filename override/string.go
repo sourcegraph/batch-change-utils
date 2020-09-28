@@ -18,8 +18,8 @@ type stringRule struct {
 	value    string
 }
 
-func FromString(s string) *String {
-	return &String{defaultValue: s}
+func FromString(s string) String {
+	return String{defaultValue: s}
 }
 
 func (s *String) Value(name string) string {
