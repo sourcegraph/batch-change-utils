@@ -39,7 +39,7 @@ func (b *Bool) Is(name string) bool {
 	return false
 }
 
-func (b *Bool) MarshalJSON() ([]byte, error) {
+func (b Bool) MarshalJSON() ([]byte, error) {
 	if len(b.rules) == 0 {
 		return json.Marshal(false)
 	} else if len(b.rules) == 1 && b.rules[0].pattern == allPattern {
