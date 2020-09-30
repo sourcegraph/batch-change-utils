@@ -1,3 +1,5 @@
+// Package override provides data types representing values in campaign specs
+// that can be overridden for specific repositories.
 package override
 
 import (
@@ -7,18 +9,22 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Bool represents a bool value that can be modified on a per-repo basis.
 type Bool struct {
 	rules []*boolRule
 }
 
+// allPattern is used to define default rules for the simple scalar case.
 const allPattern = "*"
 
+// boolRule encapsulates a compiled glob pattern and its corresponding value.
 type boolRule struct {
 	pattern  string
 	compiled glob.Glob
 	value    bool
 }
 
+// FromBool creates a Bool representing a static, scalar value.
 func FromBool(b bool) Bool {
 	return Bool{
 		rules: []*boolRule{
@@ -27,6 +33,7 @@ func FromBool(b bool) Bool {
 	}
 }
 
+// Value returns the bool value for the given repository.
 func (b *Bool) Value(name string) bool {
 	// We want the last match to win, so we'll iterate in reverse order.
 	for i := len(b.rules) - 1; i >= 0; i-- {
@@ -39,6 +46,8 @@ func (b *Bool) Value(name string) bool {
 	return false
 }
 
+// MarshalJSON marshalls the bool into its JSON representation, which will
+// either be a boolean literal or an array of objects.
 func (b Bool) MarshalJSON() ([]byte, error) {
 	if len(b.rules) == 0 {
 		return json.Marshal(false)
@@ -55,6 +64,7 @@ func (b Bool) MarshalJSON() ([]byte, error) {
 	return json.Marshal(rules)
 }
 
+// UnmarshalJSON unmarshalls a JSON value into a Bool.
 func (b *Bool) UnmarshalJSON(data []byte) error {
 	var all bool
 	if err := json.Unmarshal(data, &all); err == nil {
@@ -73,6 +83,7 @@ func (b *Bool) UnmarshalJSON(data []byte) error {
 	return bc.hydrate(b)
 }
 
+// UnmarshalYAML unmarshalls a YAML value into a Bool.
 func (b *Bool) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var all bool
 	if err := unmarshal(&all); err == nil {
@@ -91,6 +102,8 @@ func (b *Bool) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return bc.hydrate(b)
 }
 
+// newBoolRule builds a new boolRule instance, ensuring that the glob pattern
+// is compiled.
 func newBoolRule(pattern string, value bool) (*boolRule, error) {
 	compiled, err := glob.Compile(pattern)
 	if err != nil {
@@ -104,8 +117,11 @@ func newBoolRule(pattern string, value bool) (*boolRule, error) {
 	}, nil
 }
 
+// boolComplex is used internally as a helper when marshalling and
+// unmarshalling Bool instances that are not simple, scalar values.
 type boolComplex []map[string]bool
 
+// hydrate builds an array of rules out of a boolComplex value.
 func (bc boolComplex) hydrate(b *Bool) error {
 	b.rules = make([]*boolRule, len(bc))
 	for i, rule := range bc {
