@@ -26,10 +26,15 @@ type boolRule struct {
 
 // FromBool creates a Bool representing a static, scalar value.
 func FromBool(b bool) Bool {
+	rule, err := newBoolRule(allPattern, b)
+	if err != nil {
+		// Since we control the pattern being compiled, an error should never
+		// occur.
+		panic(err)
+	}
+
 	return Bool{
-		rules: []*boolRule{
-			{pattern: allPattern, value: b},
-		},
+		rules: []*boolRule{rule},
 	}
 }
 
@@ -68,10 +73,7 @@ func (b Bool) MarshalJSON() ([]byte, error) {
 func (b *Bool) UnmarshalJSON(data []byte) error {
 	var all bool
 	if err := json.Unmarshal(data, &all); err == nil {
-		b.rules = []*boolRule{{
-			pattern: allPattern,
-			value:   all,
-		}}
+		*b = FromBool(all)
 		return nil
 	}
 
@@ -87,10 +89,7 @@ func (b *Bool) UnmarshalJSON(data []byte) error {
 func (b *Bool) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var all bool
 	if err := unmarshal(&all); err == nil {
-		b.rules = []*boolRule{{
-			pattern: allPattern,
-			value:   all,
-		}}
+		*b = FromBool(all)
 		return nil
 	}
 
