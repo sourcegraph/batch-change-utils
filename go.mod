@@ -1,4 +1,4 @@
-module github.com/LawnGnome/campaign-schema
+module github.com/sourcegraph/campaignutils
 
 go 1.15
 
