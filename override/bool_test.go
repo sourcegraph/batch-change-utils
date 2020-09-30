@@ -64,7 +64,7 @@ func TestBoolIs(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if have := tc.in.Is(tc.name); have != tc.want {
+			if have := tc.in.Value(tc.name); have != tc.want {
 				t.Errorf("unexpected value: have=%v want=%v", have, tc.want)
 			}
 		})

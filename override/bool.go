@@ -27,7 +27,7 @@ func FromBool(b bool) Bool {
 	}
 }
 
-func (b *Bool) Is(name string) bool {
+func (b *Bool) Value(name string) bool {
 	// We want the last match to win, so we'll iterate in reverse order.
 	for i := len(b.rules) - 1; i >= 0; i-- {
 		if b.rules[i].compiled.Match(name) {
