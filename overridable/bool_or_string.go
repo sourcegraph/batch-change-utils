@@ -16,7 +16,7 @@ func FromBoolOrString(v interface{}) BoolOrString {
 	}
 }
 
-// Value returns the PublishedValue for the given repository.
+// Value returns the value for the given repository.
 func (bs *BoolOrString) Value(name string) interface{} {
 	v := bs.rules.Match(name)
 	if v == nil {
