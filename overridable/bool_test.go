@@ -9,7 +9,7 @@ import (
 )
 
 func TestBoolInvalid(t *testing.T) {
-	if _, err := newBoolRule("[", true); err == nil {
+	if _, err := newRule("[", true); err == nil {
 		t.Error("unexpected nil error")
 	}
 }
@@ -22,35 +22,35 @@ func TestBoolIs(t *testing.T) {
 	}{
 		"wildcard false": {
 			in: Bool{
-				rules: []*boolRule{{pattern: allPattern, value: false}},
+				rules: rules{{pattern: allPattern, value: false}},
 			},
 			name: "foo",
 			want: false,
 		},
 		"wildcard true": {
 			in: Bool{
-				rules: []*boolRule{{pattern: allPattern, value: true}},
+				rules: rules{{pattern: allPattern, value: true}},
 			},
 			name: "foo",
 			want: true,
 		},
 		"list exhausted": {
 			in: Bool{
-				rules: []*boolRule{{pattern: "bar*", value: true}},
+				rules: rules{{pattern: "bar*", value: true}},
 			},
 			name: "foo",
 			want: false,
 		},
 		"single match": {
 			in: Bool{
-				rules: []*boolRule{{pattern: "bar*", value: true}},
+				rules: rules{{pattern: "bar*", value: true}},
 			},
 			name: "bar",
 			want: true,
 		},
 		"multiple matches": {
 			in: Bool{
-				rules: []*boolRule{
+				rules: rules{
 					{pattern: allPattern, value: true},
 					{pattern: "bar*", value: false},
 				},
@@ -78,25 +78,25 @@ func TestBoolMarshalJSON(t *testing.T) {
 	}{
 		"no rules": {
 			in: Bool{
-				rules: []*boolRule{},
+				rules: rules{},
 			},
 			want: `false`,
 		},
 		"one wildcard rule": {
 			in: Bool{
-				rules: []*boolRule{{pattern: allPattern, value: true}},
+				rules: rules{{pattern: allPattern, value: true}},
 			},
 			want: `true`,
 		},
 		"one non-wildcard rule": {
 			in: Bool{
-				rules: []*boolRule{{pattern: "bar*", value: true}},
+				rules: rules{{pattern: "bar*", value: true}},
 			},
 			want: `[{"bar*":true}]`,
 		},
 		"multiple rules": {
 			in: Bool{
-				rules: []*boolRule{
+				rules: rules{
 					{pattern: allPattern, value: true},
 					{pattern: "bar*", value: false},
 				},
@@ -125,7 +125,7 @@ func TestBoolUnmarshalJSON(t *testing.T) {
 			"single false": {
 				in: `false`,
 				want: Bool{
-					rules: []*boolRule{
+					rules: rules{
 						{pattern: allPattern, value: false},
 					},
 				},
@@ -133,7 +133,7 @@ func TestBoolUnmarshalJSON(t *testing.T) {
 			"single true": {
 				in: `true`,
 				want: Bool{
-					rules: []*boolRule{
+					rules: rules{
 						{pattern: allPattern, value: true},
 					},
 				},
@@ -141,13 +141,13 @@ func TestBoolUnmarshalJSON(t *testing.T) {
 			"empty list": {
 				in: `[]`,
 				want: Bool{
-					rules: []*boolRule{},
+					rules: rules{},
 				},
 			},
 			"multiple rule list": {
 				in: `[{"*":true},{"github.com/sourcegraph/*":false}]`,
 				want: Bool{
-					rules: []*boolRule{
+					rules: rules{
 						{pattern: allPattern, value: true},
 						{pattern: "github.com/sourcegraph/*", value: false},
 					},
@@ -192,7 +192,7 @@ func TestBoolYAML(t *testing.T) {
 			"single false": {
 				in: `false`,
 				want: Bool{
-					rules: []*boolRule{
+					rules: rules{
 						{pattern: allPattern, value: false},
 					},
 				},
@@ -200,7 +200,7 @@ func TestBoolYAML(t *testing.T) {
 			"single true": {
 				in: `true`,
 				want: Bool{
-					rules: []*boolRule{
+					rules: rules{
 						{pattern: allPattern, value: true},
 					},
 				},
@@ -208,13 +208,13 @@ func TestBoolYAML(t *testing.T) {
 			"empty list": {
 				in: `[]`,
 				want: Bool{
-					rules: []*boolRule{},
+					rules: rules{},
 				},
 			},
 			"multiple rule list": {
 				in: "- \"*\": true\n- github.com/sourcegraph/*: false",
 				want: Bool{
-					rules: []*boolRule{
+					rules: rules{
 						{pattern: allPattern, value: true},
 						{pattern: "github.com/sourcegraph/*", value: false},
 					},
@@ -254,7 +254,7 @@ func TestBoolYAML(t *testing.T) {
 func initBool(b *Bool) (err error) {
 	for i, rule := range b.rules {
 		if rule.compiled == nil {
-			b.rules[i], err = newBoolRule(rule.pattern, rule.value)
+			b.rules[i], err = newRule(rule.pattern, rule.value)
 			if err != nil {
 				return err
 			}
