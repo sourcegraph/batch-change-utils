@@ -65,7 +65,7 @@ func TestBoolIs(t *testing.T) {
 	}
 }
 
-func TestBoolgMarshalJSON(t *testing.T) {
+func TestBoolMarshalJSON(t *testing.T) {
 	bs := Bool{
 		rules{
 			{pattern: allPattern, value: true},
