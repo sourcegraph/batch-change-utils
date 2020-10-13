@@ -25,6 +25,14 @@ func (bs *BoolOrString) Value(name string) interface{} {
 	return v
 }
 
+// MarshalJSON encodes the BoolOrString overridable to a json representation.
+func (bs *BoolOrString) MarshalJSON() ([]byte, error) {
+	if len(bs.rules) == 0 {
+		return []byte("false"), nil
+	}
+	return json.Marshal(bs.rules)
+}
+
 // UnmarshalJSON unmarshalls a JSON value into a Publish.
 func (bs *BoolOrString) UnmarshalJSON(data []byte) error {
 	var b bool

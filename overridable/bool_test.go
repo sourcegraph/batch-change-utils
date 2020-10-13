@@ -8,12 +8,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func TestBoolInvalid(t *testing.T) {
-	if _, err := newRule("[", true); err == nil {
-		t.Error("unexpected nil error")
-	}
-}
-
 func TestBoolIs(t *testing.T) {
 	for name, tc := range map[string]struct {
 		in   Bool
@@ -71,48 +65,19 @@ func TestBoolIs(t *testing.T) {
 	}
 }
 
-func TestBoolMarshalJSON(t *testing.T) {
-	for name, tc := range map[string]struct {
-		in   Bool
-		want string
-	}{
-		"no rules": {
-			in: Bool{
-				rules: rules{},
-			},
-			want: `false`,
+func TestBoolgMarshalJSON(t *testing.T) {
+	bs := Bool{
+		rules{
+			{pattern: allPattern, value: true},
+			{pattern: "bar*", value: false},
 		},
-		"one wildcard rule": {
-			in: Bool{
-				rules: rules{{pattern: allPattern, value: true}},
-			},
-			want: `true`,
-		},
-		"one non-wildcard rule": {
-			in: Bool{
-				rules: rules{{pattern: "bar*", value: true}},
-			},
-			want: `[{"bar*":true}]`,
-		},
-		"multiple rules": {
-			in: Bool{
-				rules: rules{
-					{pattern: allPattern, value: true},
-					{pattern: "bar*", value: false},
-				},
-			},
-			want: `[{"*":true},{"bar*":false}]`,
-		},
-	} {
-		t.Run(name, func(t *testing.T) {
-			data, err := json.Marshal(&tc.in)
-			if err != nil {
-				t.Errorf("unexpected non-nil error: %v", err)
-			}
-			if string(data) != tc.want {
-				t.Errorf("unexpected JSON: have=%q want=%q", string(data), tc.want)
-			}
-		})
+	}
+	data, err := json.Marshal(&bs)
+	if err != nil {
+		t.Errorf("unexpected non-nil error: %v", err)
+	}
+	if have, want := string(data), `[{"*":true},{"bar*":false}]`; have != want {
+		t.Errorf("unexpected JSON: have=%q want=%q", have, want)
 	}
 }
 
