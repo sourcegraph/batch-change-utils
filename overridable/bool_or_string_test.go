@@ -8,124 +8,135 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func TestBoolIs(t *testing.T) {
+func TestBoolOrStringIs(t *testing.T) {
 	for name, tc := range map[string]struct {
-		in   Bool
-		name string
-		want bool
+		def        BoolOrString
+		input      string
+		wantParsed interface{}
 	}{
 		"wildcard false": {
-			in: Bool{
+			def: BoolOrString{
 				rules: rules{{pattern: allPattern, value: false}},
 			},
-			name: "foo",
-			want: false,
+			input:      "foo",
+			wantParsed: false,
 		},
 		"wildcard true": {
-			in: Bool{
+			def: BoolOrString{
 				rules: rules{{pattern: allPattern, value: true}},
 			},
-			name: "foo",
-			want: true,
+			input:      "foo",
+			wantParsed: true,
+		},
+		"wildcard string": {
+			def: BoolOrString{
+				rules: rules{{pattern: allPattern, value: "draft"}},
+			},
+			input:      "foo",
+			wantParsed: "draft",
 		},
 		"list exhausted": {
-			in: Bool{
+			def: BoolOrString{
 				rules: rules{{pattern: "bar*", value: true}},
 			},
-			name: "foo",
-			want: false,
+			input:      "foo",
+			wantParsed: false,
 		},
 		"single match": {
-			in: Bool{
+			def: BoolOrString{
 				rules: rules{{pattern: "bar*", value: true}},
 			},
-			name: "bar",
-			want: true,
+			input:      "bar",
+			wantParsed: true,
 		},
 		"multiple matches": {
-			in: Bool{
+			def: BoolOrString{
 				rules: rules{
 					{pattern: allPattern, value: true},
 					{pattern: "bar*", value: false},
 				},
 			},
-			name: "bar",
-			want: false,
+			input:      "bar",
+			wantParsed: false,
+		},
+		"multiple matches string": {
+			def: BoolOrString{
+				rules: rules{
+					{pattern: allPattern, value: true},
+					{pattern: "bar*", value: "draft"},
+				},
+			},
+			input:      "bar",
+			wantParsed: "draft",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if err := initBool(&tc.in); err != nil {
+			if err := initBoolOrString(&tc.def); err != nil {
 				t.Fatal(err)
 			}
 
-			if have := tc.in.Value(tc.name); have != tc.want {
-				t.Errorf("unexpected value: have=%v want=%v", have, tc.want)
+			if have := tc.def.Value(tc.input); have != tc.wantParsed {
+				t.Errorf("unexpected value: have=%v want=%v", have, tc.wantParsed)
 			}
 		})
 	}
 }
 
-func TestBoolMarshalJSON(t *testing.T) {
-	bs := Bool{
+func TestBoolOrStringMarshalJSON(t *testing.T) {
+	bs := BoolOrString{
 		rules{
 			{pattern: allPattern, value: true},
 			{pattern: "bar*", value: false},
+			{pattern: "foo*", value: "draft"},
 		},
 	}
 	data, err := json.Marshal(&bs)
 	if err != nil {
 		t.Errorf("unexpected non-nil error: %v", err)
 	}
-	if have, want := string(data), `[{"*":true},{"bar*":false}]`; have != want {
+	if have, want := string(data), `[{"*":true},{"bar*":false},{"foo*":"draft"}]`; have != want {
 		t.Errorf("unexpected JSON: have=%q want=%q", have, want)
 	}
 }
 
-func TestBoolUnmarshalJSON(t *testing.T) {
+func TestBoolOrStringUnmarshalJSON(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		for name, tc := range map[string]struct {
 			in   string
-			want Bool
+			want BoolOrString
 		}{
-			"single false": {
-				in: `false`,
-				want: Bool{
-					rules: rules{
-						{pattern: allPattern, value: false},
-					},
-				},
-			},
-			"single true": {
+			"single bool": {
 				in: `true`,
-				want: Bool{
+				want: BoolOrString{
 					rules: rules{
 						{pattern: allPattern, value: true},
 					},
 				},
 			},
-			"empty list": {
-				in: `[]`,
-				want: Bool{
-					rules: rules{},
+			"single string": {
+				in: `"draft"`,
+				want: BoolOrString{
+					rules: rules{
+						{pattern: allPattern, value: "draft"},
+					},
 				},
 			},
-			"multiple rule list": {
-				in: `[{"*":true},{"github.com/sourcegraph/*":false}]`,
-				want: Bool{
+			"list": {
+				in: `[{"foo*":"bar"}]`,
+				want: BoolOrString{
 					rules: rules{
-						{pattern: allPattern, value: true},
-						{pattern: "github.com/sourcegraph/*", value: false},
+						{pattern: "foo*", value: "bar"},
 					},
 				},
 			},
 		} {
 			t.Run(name, func(t *testing.T) {
-				var have Bool
+				var have BoolOrString
 				if err := json.Unmarshal([]byte(tc.in), &have); err != nil {
 					t.Errorf("unexpected non-nil error: %v", err)
 				}
 				if diff := cmp.Diff(&have, &tc.want); diff != "" {
-					t.Errorf("unexpected Bool: %s", diff)
+					t.Errorf("unexpected BoolOrString: %s", diff)
 				}
 			})
 		}
@@ -133,13 +144,12 @@ func TestBoolUnmarshalJSON(t *testing.T) {
 
 	t.Run("invalid", func(t *testing.T) {
 		for name, in := range map[string]string{
-			"string":          `"foo"`,
 			"empty object":    `[{}]`,
 			"too many fields": `[{"foo": true,"bar":false}]`,
 			"invalid glob":    `[{"[":false}]`,
 		} {
 			t.Run(name, func(t *testing.T) {
-				var have Bool
+				var have BoolOrString
 				if err := json.Unmarshal([]byte(in), &have); err == nil {
 					t.Error("unexpected nil error")
 				}
@@ -148,15 +158,15 @@ func TestBoolUnmarshalJSON(t *testing.T) {
 	})
 }
 
-func TestBoolYAML(t *testing.T) {
+func TestBoolOrStringYAML(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		for name, tc := range map[string]struct {
 			in   string
-			want Bool
+			want BoolOrString
 		}{
 			"single false": {
 				in: `false`,
-				want: Bool{
+				want: BoolOrString{
 					rules: rules{
 						{pattern: allPattern, value: false},
 					},
@@ -164,7 +174,7 @@ func TestBoolYAML(t *testing.T) {
 			},
 			"single true": {
 				in: `true`,
-				want: Bool{
+				want: BoolOrString{
 					rules: rules{
 						{pattern: allPattern, value: true},
 					},
@@ -172,27 +182,28 @@ func TestBoolYAML(t *testing.T) {
 			},
 			"empty list": {
 				in: `[]`,
-				want: Bool{
+				want: BoolOrString{
 					rules: rules{},
 				},
 			},
 			"multiple rule list": {
-				in: "- \"*\": true\n- github.com/sourcegraph/*: false",
-				want: Bool{
+				in: "- \"*\": true\n- github.com/sourcegraph/*: false\n- github.com/sd9/*: draft",
+				want: BoolOrString{
 					rules: rules{
 						{pattern: allPattern, value: true},
 						{pattern: "github.com/sourcegraph/*", value: false},
+						{pattern: "github.com/sd9/*", value: "draft"},
 					},
 				},
 			},
 		} {
 			t.Run(name, func(t *testing.T) {
-				var have Bool
+				var have BoolOrString
 				if err := yaml.Unmarshal([]byte(tc.in), &have); err != nil {
 					t.Errorf("unexpected non-nil error: %v", err)
 				}
 				if diff := cmp.Diff(&have, &tc.want); diff != "" {
-					t.Errorf("unexpected Bool: %s", diff)
+					t.Errorf("unexpected BoolOrString: %s", diff)
 				}
 			})
 		}
@@ -200,13 +211,12 @@ func TestBoolYAML(t *testing.T) {
 
 	t.Run("invalid", func(t *testing.T) {
 		for name, in := range map[string]string{
-			"string":          `foo`,
 			"empty object":    `- {}`,
 			"too many fields": `- {"foo": true, "bar": false}`,
 			"invalid glob":    `- "[": false`,
 		} {
 			t.Run(name, func(t *testing.T) {
-				var have Bool
+				var have BoolOrString
 				if err := yaml.Unmarshal([]byte(in), &have); err == nil {
 					t.Error("unexpected nil error")
 				}
@@ -215,11 +225,11 @@ func TestBoolYAML(t *testing.T) {
 	})
 }
 
-// initBool ensures all rules are compiled.
-func initBool(b *Bool) (err error) {
-	for i, rule := range b.rules {
+// initBoolOrString ensures all rules are compiled.
+func initBoolOrString(r *BoolOrString) (err error) {
+	for i, rule := range r.rules {
 		if rule.compiled == nil {
-			b.rules[i], err = newRule(rule.pattern, rule.value)
+			r.rules[i], err = newRule(rule.pattern, rule.value)
 			if err != nil {
 				return err
 			}
