@@ -24,7 +24,7 @@ func (b *Bool) Value(name string) bool {
 }
 
 // MarshalJSON encodes the Bool overridable to a json representation.
-func (b *Bool) MarshalJSON() ([]byte, error) {
+func (b Bool) MarshalJSON() ([]byte, error) {
 	if len(b.rules) == 0 {
 		return []byte("false"), nil
 	}
@@ -64,6 +64,6 @@ func (b *Bool) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // Equal tests two Bools for equality, used in cmp.
-func (b *Bool) Equal(other *Bool) bool {
+func (b Bool) Equal(other Bool) bool {
 	return b.rules.Equal(other.rules)
 }
