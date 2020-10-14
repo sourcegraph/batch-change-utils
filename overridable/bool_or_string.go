@@ -26,7 +26,7 @@ func (bs *BoolOrString) Value(name string) interface{} {
 }
 
 // MarshalJSON encodes the BoolOrString overridable to a json representation.
-func (bs *BoolOrString) MarshalJSON() ([]byte, error) {
+func (bs BoolOrString) MarshalJSON() ([]byte, error) {
 	if len(bs.rules) == 0 {
 		return []byte("false"), nil
 	}
@@ -77,6 +77,6 @@ func (bs *BoolOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // Equal tests two BoolOrStrings for equality, used in cmp.
-func (bs *BoolOrString) Equal(other *BoolOrString) bool {
+func (bs BoolOrString) Equal(other BoolOrString) bool {
 	return bs.rules.Equal(other.rules)
 }

@@ -47,7 +47,7 @@ func newRule(pattern string, value interface{}) (*rule, error) {
 	}, nil
 }
 
-func (a *rule) Equal(b *rule) bool {
+func (a rule) Equal(b rule) bool {
 	return a.pattern == b.pattern && a.value == b.value
 }
 
@@ -107,7 +107,7 @@ func (r rules) Equal(other rules) bool {
 	for i := range r {
 		a := r[i]
 		b := other[i]
-		if !a.Equal(b) {
+		if !a.Equal(*b) {
 			return false
 		}
 	}
