@@ -12,8 +12,8 @@ import (
 // allPattern is used to define default rules for the simple scalar case.
 const allPattern = "*"
 
-// SimpleRule creates the simplest of rules for the given value: `"*": value`.
-func SimpleRule(v interface{}) *rule {
+// simpleRule creates the simplest of rules for the given value: `"*": value`.
+func simpleRule(v interface{}) *rule {
 	r, err := newRule(allPattern, v)
 	if err != nil {
 		// Since we control the pattern being compiled, an error should never

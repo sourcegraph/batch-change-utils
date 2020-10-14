@@ -12,7 +12,7 @@ type BoolOrString struct {
 // FromBoolOrString creates a BoolOrString representing a static, scalar value.
 func FromBoolOrString(v interface{}) BoolOrString {
 	return BoolOrString{
-		rules: rules{SimpleRule(v)},
+		rules: rules{simpleRule(v)},
 	}
 }
 
@@ -37,12 +37,12 @@ func (bs *BoolOrString) MarshalJSON() ([]byte, error) {
 func (bs *BoolOrString) UnmarshalJSON(data []byte) error {
 	var b bool
 	if err := json.Unmarshal(data, &b); err == nil {
-		*bs = BoolOrString{rules: rules{SimpleRule(b)}}
+		*bs = BoolOrString{rules: rules{simpleRule(b)}}
 		return nil
 	}
 	var s string
 	if err := json.Unmarshal(data, &s); err == nil {
-		*bs = BoolOrString{rules: rules{SimpleRule(s)}}
+		*bs = BoolOrString{rules: rules{simpleRule(s)}}
 		return nil
 	}
 
@@ -58,13 +58,13 @@ func (bs *BoolOrString) UnmarshalJSON(data []byte) error {
 func (bs *BoolOrString) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var b bool
 	if err := unmarshal(&b); err == nil {
-		*bs = BoolOrString{rules: rules{SimpleRule(b)}}
+		*bs = BoolOrString{rules: rules{simpleRule(b)}}
 		return nil
 	}
 
 	var s string
 	if err := unmarshal(&s); err == nil {
-		*bs = BoolOrString{rules: rules{SimpleRule(s)}}
+		*bs = BoolOrString{rules: rules{simpleRule(s)}}
 		return nil
 	}
 

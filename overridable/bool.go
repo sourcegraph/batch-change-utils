@@ -10,7 +10,7 @@ type Bool struct {
 // FromBool creates a Bool representing a static, scalar value.
 func FromBool(b bool) Bool {
 	return Bool{
-		rules: rules{SimpleRule(b)},
+		rules: rules{simpleRule(b)},
 	}
 }
 
@@ -35,7 +35,7 @@ func (b *Bool) MarshalJSON() ([]byte, error) {
 func (b *Bool) UnmarshalJSON(data []byte) error {
 	var all bool
 	if err := json.Unmarshal(data, &all); err == nil {
-		*b = Bool{rules: rules{SimpleRule(all)}}
+		*b = Bool{rules: rules{simpleRule(all)}}
 		return nil
 	}
 
@@ -51,7 +51,7 @@ func (b *Bool) UnmarshalJSON(data []byte) error {
 func (b *Bool) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var all bool
 	if err := unmarshal(&all); err == nil {
-		*b = Bool{rules: rules{SimpleRule(all)}}
+		*b = Bool{rules: rules{simpleRule(all)}}
 		return nil
 	}
 
