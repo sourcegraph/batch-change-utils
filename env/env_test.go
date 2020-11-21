@@ -15,7 +15,14 @@ func TestEnvironment_MarshalJSON(t *testing.T) {
 	}{
 		"no variables": {
 			in:   Environment{},
-			want: `[]`,
+			want: `{}`,
+		},
+		"only static variables": {
+			in: Environment{vars: []variable{
+				{name: "foo", value: stringPtr("bar")},
+				{name: "quux", value: stringPtr("baz")},
+			}},
+			want: `{"foo":"bar","quux":"baz"}`,
 		},
 		"with variables": {
 			in: Environment{vars: []variable{
@@ -154,6 +161,38 @@ func TestEnvironment_UnmarshalYAML(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestEnvironment_IsStatic(t *testing.T) {
+	for name, tc := range map[string]struct {
+		env  Environment
+		want bool
+	}{
+		"empty": {
+			env:  Environment{},
+			want: true,
+		},
+		"static": {
+			env: Environment{vars: []variable{
+				{name: "foo", value: stringPtr("bar")},
+				{name: "quux", value: stringPtr("baz")},
+			}},
+			want: true,
+		},
+		"not static": {
+			env: Environment{vars: []variable{
+				{name: "foo", value: stringPtr("bar")},
+				{name: "quux", value: nil},
+			}},
+			want: false,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if have := tc.env.IsStatic(); have != tc.want {
+				t.Errorf("unexpected static value: have=%v want=%v", have, tc.want)
+			}
+		})
+	}
 }
 
 func TestEnvironment_Resolve(t *testing.T) {
