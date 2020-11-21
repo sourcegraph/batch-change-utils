@@ -15,14 +15,24 @@ type Environment struct {
 	vars []variable
 }
 
-// MarshalJSON marshals the environment to the array form.
+// MarshalJSON marshals the environment.
 func (e Environment) MarshalJSON() ([]byte, error) {
-	// Although we allow inputs of both the array and object variants, we'll
-	// always marshal to the array variant, since it's semantically a strict
-	// superset of the object variant.
 	if e.vars == nil {
-		return []byte(`[]`), nil
+		return []byte(`{}`), nil
 	}
+
+	// For compatibility with older versions of Sourcegraph, if all environment
+	// variables have static values defined, we'll encode to the object variant.
+	if e.IsStatic() {
+		vars := make(map[string]string, len(e.vars))
+		for _, v := range e.vars {
+			vars[v.name] = *v.value
+		}
+
+		return json.Marshal(vars)
+	}
+
+	// Otherwise, we have to return the array variant.
 	return json.Marshal(e.vars)
 }
 
@@ -79,6 +89,20 @@ func (e *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	return nil
+}
+
+// IsStatic returns true if the environment doesn't depend on any outer
+// environment variables.
+//
+// Put another way: if this function returns true, then Resolve() will always
+// return the same map for the environment.
+func (e Environment) IsStatic() bool {
+	for _, v := range e.vars {
+		if v.value == nil {
+			return false
+		}
+	}
+	return true
 }
 
 // Resolve resolves the environment, using values from the given outer
