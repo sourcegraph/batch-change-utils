@@ -82,3 +82,18 @@ func (v *variable) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	return nil
 }
+
+// Equal checks if two environment variables are equal.
+func (a variable) Equal(b variable) bool {
+	if a.name != b.name {
+		return false
+	}
+
+	if a.value == nil && b.value == nil {
+		return true
+	}
+	if a.value == nil || b.value == nil {
+		return false
+	}
+	return *a.value == *b.value
+}

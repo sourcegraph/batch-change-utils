@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
 )
 
@@ -139,4 +140,18 @@ func (e Environment) Resolve(outer []string) (map[string]string, error) {
 	}
 
 	return resolved, nil
+}
+
+// Equal verifies if two environments are equal.
+func (e Environment) Equal(other Environment) bool {
+	return cmp.Equal(e.mapify(), other.mapify())
+}
+
+func (e Environment) mapify() map[string]*string {
+	m := make(map[string]*string, len(e.vars))
+	for _, v := range e.vars {
+		m[v.name] = v.value
+	}
+
+	return m
 }

@@ -186,18 +186,5 @@ func TestVariable_UnmarshalYAML(t *testing.T) {
 		})
 	})
 }
-func (a variable) Equal(b variable) bool {
-	if a.name != b.name {
-		return false
-	}
-
-	if a.value == nil && b.value == nil {
-		return true
-	}
-	if a.value == nil || b.value == nil {
-		return false
-	}
-	return *a.value == *b.value
-}
 
 func stringPtr(s string) *string { return &s }
