@@ -255,16 +255,3 @@ func TestEnvironment_Resolve(t *testing.T) {
 		}
 	})
 }
-
-func (a Environment) Equal(b Environment) bool {
-	return cmp.Equal(a.mapify(), b.mapify())
-}
-
-func (a Environment) mapify() map[string]*string {
-	m := make(map[string]*string, len(a.vars))
-	for _, v := range a.vars {
-		m[v.name] = v.value
-	}
-
-	return m
-}
