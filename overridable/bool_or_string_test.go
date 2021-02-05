@@ -82,6 +82,61 @@ func TestBoolOrStringIs(t *testing.T) {
 	}
 }
 
+func TestBoolOrStringWithSuffix(t *testing.T) {
+	for name, tc := range map[string]struct {
+		def BoolOrString
+
+		inputName   string
+		inputSuffix string
+
+		wantParsed interface{}
+	}{
+		"pattern and suffix match": {
+			def: BoolOrString{
+				rules: rules{{pattern: allPattern, value: "draft", patternSuffix: "the-suffix"}},
+			},
+			inputName:   "should-not-matter",
+			inputSuffix: "the-suffix",
+			wantParsed:  "draft",
+		},
+		"pattern matches but suffix not": {
+			def: BoolOrString{
+				rules: rules{{pattern: allPattern, value: "draft", patternSuffix: "the-suffix"}},
+			},
+			inputName:   "should-not-matter",
+			inputSuffix: "horse",
+			wantParsed:  false,
+		},
+		"pattern does not match but suffix does": {
+			def: BoolOrString{
+				rules: rules{{pattern: "does-not-match", value: "draft", patternSuffix: "the-suffix"}},
+			},
+			inputName:   "will-not-match",
+			inputSuffix: "the-suffix",
+			wantParsed:  false,
+		},
+
+		"suffix given but not in rule": {
+			def: BoolOrString{
+				rules: rules{{pattern: allPattern, value: "draft", patternSuffix: ""}},
+			},
+			inputName:   "should-not-matter",
+			inputSuffix: "the-suffix",
+			wantParsed:  "draft",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := initBoolOrString(&tc.def); err != nil {
+				t.Fatal(err)
+			}
+
+			if have := tc.def.ValueWithSuffix(tc.inputName, tc.inputSuffix); have != tc.wantParsed {
+				t.Errorf("unexpected value: have=%v want=%v", have, tc.wantParsed)
+			}
+		})
+	}
+}
+
 func TestBoolOrStringMarshalJSON(t *testing.T) {
 	bs := BoolOrString{
 		rules{
@@ -126,6 +181,14 @@ func TestBoolOrStringUnmarshalJSON(t *testing.T) {
 				want: BoolOrString{
 					rules: rules{
 						{pattern: "foo*", value: "bar"},
+					},
+				},
+			},
+			"pattern with suffix": {
+				in: `[{"foo*@my-branch-name": true}]`,
+				want: BoolOrString{
+					rules: rules{
+						{pattern: "foo*", value: true, patternSuffix: "my-branch-name"},
 					},
 				},
 			},
@@ -196,6 +259,16 @@ func TestBoolOrStringYAML(t *testing.T) {
 					},
 				},
 			},
+
+			"rule list with pattern suffixes": {
+				in: "- github.com/sourcegraph/*@branch-1: false\n- github.com/sd9/*@branch-2: draft",
+				want: BoolOrString{
+					rules: rules{
+						{pattern: "github.com/sourcegraph/*", patternSuffix: "branch-1", value: false},
+						{pattern: "github.com/sd9/*", patternSuffix: "branch-2", value: "draft"},
+					},
+				},
+			},
 		} {
 			t.Run(name, func(t *testing.T) {
 				var have BoolOrString
@@ -233,6 +306,9 @@ func initBoolOrString(r *BoolOrString) (err error) {
 			if err != nil {
 				return err
 			}
+		}
+		if rule.patternSuffix != "" {
+			r.rules[i].patternSuffix = rule.patternSuffix
 		}
 	}
 
