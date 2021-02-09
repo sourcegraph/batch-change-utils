@@ -48,3 +48,65 @@ func TestRulesMarshalJSON(t *testing.T) {
 		})
 	}
 }
+
+func TestMatchWithSuffix(t *testing.T) {
+	type ruleInputs struct {
+		pattern string
+		value   interface{}
+	}
+	compileInputs := func(t *testing.T, inputs []ruleInputs) (rs rules) {
+		for _, input := range inputs {
+			r, err := newRule(input.pattern, input.value)
+			if err != nil {
+				t.Fatalf("failed to compile rule. pattern=%q, value=%+v", input.pattern, input.value)
+			}
+			rs = append(rs, r)
+		}
+		return
+	}
+
+	for name, tc := range map[string]struct {
+		rules []ruleInputs
+		args  []string
+		want  interface{}
+	}{
+		"no rules": {
+			rules: []ruleInputs{},
+			args:  []string{"name", "suffix"},
+			want:  nil,
+		},
+		"no match": {
+			rules: []ruleInputs{
+				{pattern: "repo*@branch-name-1", value: "rule-1"},
+				{pattern: "repo*@branch-name-2", value: "rule-2"},
+			},
+			args: []string{"repo-1000", "other-branch-name"},
+			want: nil,
+		},
+		"single match": {
+			rules: []ruleInputs{
+				{pattern: "repo*@other-branch-name", value: "rule-1"},
+				{pattern: "repo*@branch-name", value: "rule-2"},
+			},
+			args: []string{"repo-1000", "other-branch-name"},
+			want: "rule-1",
+		},
+		"multiple matches": {
+			rules: []ruleInputs{
+				{pattern: "repo*@branch-name", value: "rule-1"},
+				{pattern: "repo*@branch-name", value: "rule-2"},
+			},
+			args: []string{"repo-1000", "branch-name"},
+			want: "rule-2",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			rs := compileInputs(t, tc.rules)
+
+			have := rs.MatchWithSuffix(tc.args[0], tc.args[1])
+			if have != tc.want {
+				t.Errorf("unexpected match. want=%+v, have=%+v", tc.want, have)
+			}
+		})
+	}
+}
