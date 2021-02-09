@@ -27,6 +27,7 @@ func simpleRule(v interface{}) *rule {
 
 type complex []map[string]interface{}
 
+
 type rule struct {
 	// pattern is the glob-syntax pattern, such as "a/b/ceee-*"
 	pattern string
@@ -41,7 +42,7 @@ type rule struct {
 // is compiled.
 func newRule(pattern string, value interface{}) (*rule, error) {
 	var suffix string
-	split := strings.Split(pattern, "@")
+	split := strings.SplitN(pattern, "@", 2)
 	if len(split) > 1 {
 		pattern = split[0]
 		suffix = split[1]
