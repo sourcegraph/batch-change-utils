@@ -1,4 +1,4 @@
-module github.com/sourcegraph/campaignutils
+module github.com/sourcegraph/batch-change-utils
 
 go 1.15
 
