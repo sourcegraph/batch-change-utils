@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/go-multierror"
 
-	"github.com/sourcegraph/campaignutils/jsonschema"
+	"github.com/sourcegraph/batch-change-utils/jsonschema"
 )
 
 // UnmarshalValidate validates the JSON input against the provided JSON schema.

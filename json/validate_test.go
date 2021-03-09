@@ -15,7 +15,7 @@ func TestUnmarshalValidate(t *testing.T) {
 
 	schema := `{
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "$id": "https://github.com/sourcegraph/campaignutils/schema/test.schema.json",
+        "$id": "https://github.com/sourcegraph/batch-change-utils/schema/test.schema.json",
         "type": "object",
         "properties": {
             "a": { "type": "string" },

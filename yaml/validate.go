@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 
-	"github.com/sourcegraph/campaignutils/jsonschema"
+	"github.com/sourcegraph/batch-change-utils/jsonschema"
 
 	yamlv3 "gopkg.in/yaml.v3"
 )
