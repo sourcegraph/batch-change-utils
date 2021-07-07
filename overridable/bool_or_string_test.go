@@ -40,7 +40,7 @@ func TestBoolOrStringIs(t *testing.T) {
 				rules: rules{{pattern: "bar*", value: true}},
 			},
 			input:      "foo",
-			wantParsed: false,
+			wantParsed: nil,
 		},
 		"single match": {
 			def: BoolOrString{
@@ -105,7 +105,7 @@ func TestBoolOrStringWithSuffix(t *testing.T) {
 			},
 			inputName:   "should-not-matter",
 			inputSuffix: "horse",
-			wantParsed:  false,
+			wantParsed:  nil,
 		},
 		"pattern does not match but suffix does": {
 			def: BoolOrString{
@@ -113,7 +113,7 @@ func TestBoolOrStringWithSuffix(t *testing.T) {
 			},
 			inputName:   "will-not-match",
 			inputSuffix: "the-suffix",
-			wantParsed:  false,
+			wantParsed:  nil,
 		},
 
 		"suffix given but not in rule": {

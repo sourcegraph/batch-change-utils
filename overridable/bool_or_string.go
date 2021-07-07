@@ -18,20 +18,12 @@ func FromBoolOrString(v interface{}) BoolOrString {
 
 // Value returns the value for the given repository.
 func (bs *BoolOrString) Value(name string) interface{} {
-	v := bs.rules.Match(name)
-	if v == nil {
-		return false
-	}
-	return v
+	return bs.rules.Match(name)
 }
 
 // ValueWithSuffix returns the value for the given repository and branch name.
 func (bs *BoolOrString) ValueWithSuffix(name, suffix string) interface{} {
-	v := bs.rules.MatchWithSuffix(name, suffix)
-	if v == nil {
-		return false
-	}
-	return v
+	return bs.rules.MatchWithSuffix(name, suffix)
 }
 
 // MarshalJSON encodes the BoolOrString overridable to a json representation.
